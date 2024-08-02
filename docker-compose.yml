@@ -1,0 +1,52 @@
+version: '3.7'
+
+services:
+  web:
+    container_name: django
+    volumes:
+      - static:/static
+      - .:/app
+      #- /home/nak/https/django-docker-compose/django_bet/logs:/app/logs
+    env_file:
+      - .env
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    # mem_limit: 8g
+    cpus: '3.5'
+    depends_on:
+      - redis
+      - celery
+      - beat
+    environment:
+      - DEBUG=False
+      - DATABASE_URL=sqlite:///db.sqlite3  # Ou outra URL de banco de dados
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+  
+  # Serviço do Redis
+  redis:
+    image: redis:latest
+
+  # Serviço do Celery
+  celery:
+    build: .
+    command: celery -A django_bet worker --loglevel=info -E -l info
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+  # Serviço do Celery Beat
+  beat:
+    build: .
+    command: celery -A django_bet beat --loglevel=info -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+volumes:
+  static:

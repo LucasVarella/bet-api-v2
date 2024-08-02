@@ -1,0 +1,3 @@
+web: gunicorn django_bet.wsgi
+worker: celery -A django_bet worker --loglevel=info -P solo -E -l info
+beat: celery -A django_bet beat --loglevel=info -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
